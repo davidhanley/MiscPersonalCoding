@@ -1,30 +1,37 @@
 (ns clothes.core
-  (:gen-class))
+    (:gen-class))				      
 
 (defn l[] (use 'clothes.core :reload))
 
-(def clothes-orders [ [:socks :shoes]; :boots]
-                      [:undershirt :shirt :vest]; :jacket]
-		      [:underwear :pants]
-		      [:pants :shoes]; :boots]
-		      [:undershirt :hat] ] )
+(def clothes-orders [ [:socks :shoes :boots]
+                      [:undershirt :shirt :vest :jacket]
+		      [:underwear :pants :snowpants]
+		      [:pants :shoes :boots]
+		      [:undershirt :hat] 
+		      [:jacket :scarf ] 
+		      [:shoes :mittens] 
+		      [:jacket :mittens] ] )
 
 (def clothes-list (apply sorted-set (apply concat clothes-orders)))
 
-(defn permute[ lst filter? ]
+(defn pair-follows-rule[ i1 i2 rule ] 
+  (let [f #(let [i (.indexOf rule %)] (if (= i -1) nil i))
+       p1 (f i1) p2 (f i2)]
+	(if (and p1 p2) (< p1 p2) true)))
+
+(defn pair-follows-every-rule[ i1 i2 ]
+  (every? (partial pair-follows-rule i1 i2) clothes-orders))
+(def pair-follows-every-rule (memoize pair-follows-every-rule))
+
+(defn is-before-every[ item lst ]
+  (every? (partial pair-follows-every-rule item) lst))
+
+(defn permute[ lst ]
   (if (< (count lst) 2) [lst]
-    (filter filter? (mapcat (fn[elt](map (fn[tail](cons elt tail)) (permute (remove #{elt} lst) filter?))) lst))))
-
-(defn indices-follow-rules[ dress-order rule ]
-  (apply < (remove #{-1} (map (fn[item](.indexOf dress-order item)) rule))))			    
-
-(defn clothing-sequence-follows-all-rules[ clothing-sequence ]
-  (every? true? (map (partial indices-follows-rule clothing-sequence) clothes-orders)))
+    (mapcat (fn[item] (let [rest-list (remove #{item} lst)]
+			   (when (is-before-every item rest-list) 
+			     (map (fn[rl](cons item rl)) (permute rest-list))))) lst)))
 
 (defn solve[]
-  (count (filter clothing-sequence-follows-all-rules (permute clothes-list clothing-sequence-follows-all-rules))))
+  (count (permute clothes-list)))
 
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (println "Hello, World!"))
